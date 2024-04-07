@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import "../styles/globals.css";
-import StudentVue from "studentvue";
+import {loginVUE} from "../utils/StudentVUE";
 import { useRouter } from "next/router";
 import { Flowbite, Toast, useTheme } from "flowbite-react";
 import Topbar from "../components/TopBar";
@@ -39,10 +39,11 @@ function MyApp({ Component, pageProps }) {
 		url?: string
 	) => {
 		await setLoading(true);
-		await StudentVue.login(url || districtURL, {
-			username: username,
-			password: password,
-		})
+		await loginVUE(
+			username,
+			password,
+			url || districtURL
+		)
 			.then(async (res) => {
 				console.log(res);
 				await setClient(res);
@@ -87,9 +88,9 @@ function MyApp({ Component, pageProps }) {
 	};
 
 	useEffect(() => {
-		if (router.pathname !== "/letter") {
-			router.push("/letter");
-		}
+		// if (router.pathname !== "/letter") {
+		// 	router.push("/letter");
+		// }
 	}, []);
 
 	// useEffect(() => {
