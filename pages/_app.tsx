@@ -20,6 +20,10 @@ interface Toast {
 
 const noShowNav = ["/login", "/", "/privacy", "/letter"];
 
+function loginJSONP(data) {
+	alert(data);
+}
+
 function MyApp({ Component, pageProps }) {
 	const router = useRouter();
 	const [districtURL, setDistrictURL] = useState(
