@@ -99,7 +99,7 @@ class Client {
     public cookieJar = new CookieJar();
     public client = wrapper(axios.create({
         jar: this.cookieJar,
-        baseURL: 'http://localhost:3001/',
+        baseURL: 'https://corsvue.arjun.tech/api/',
         withCredentials: true,
     }));
 
@@ -237,9 +237,9 @@ class Client {
         });
     }
 
-    public gradebook(): Promise<Grades> {
+    // public gradebook(): Promise<Grades> {
         
-    }
+    // }
 }
 
 export { Client, loginVUE }
