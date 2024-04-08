@@ -3,7 +3,6 @@ import axios from 'axios';
 import { wrapper } from 'axios-cookiejar-support';
 // @ts-ignore
 import { CookieJar } from 'tough-cookie';
-import RequestException from './RequestException/RequestException';
 
 
 interface Assignment {
@@ -71,7 +70,7 @@ interface Grades {
 function loginVUE(username: string, password: string, hostURL: string): Promise<Client> {
     return new Promise((res, rej) => {
         if(hostURL.length === 0) {
-            return rej(new RequestException({ message: 'District URL cannot be an empty string' }));
+            return rej();
         }
         const host = new URL(hostURL).host 
         const client = new Client(username, password, host);
