@@ -6,6 +6,68 @@ import { CookieJar } from 'tough-cookie';
 import RequestException from './RequestException/RequestException';
 
 
+interface Assignment {
+	name: string;
+	grade: {
+		letter: string;
+		raw: number;
+		color: string;
+	};
+	points: {
+		earned: number;
+		possible: number;
+	};
+	date: {
+		due: Date;
+		assigned: Date;
+	};
+	category: string;
+}
+
+interface Course {
+	name: string;
+	period: number;
+	room: string;
+	weighted: boolean;
+	grade: {
+		letter: string;
+		raw: number;
+		color: string;
+	};
+	teacher: {
+		name: string;
+		email: string;
+	};
+	categories: {
+		name: string;
+		weight: number;
+		grade: {
+			letter: string;
+			raw: number;
+			color: string;
+		};
+		points: {
+			earned: number;
+			possible: number;
+		};
+	}[];
+	assignments: Assignment[];
+}
+
+interface Grades {
+	courses: Course[];
+	gpa: number;
+	wgpa: number;
+	period: {
+		name: string;
+		index: number;
+	};
+	periods: {
+		name: string;
+		index: number;
+	}[];
+}
+
 function loginVUE(username: string, password: string, hostURL: string): Promise<Client> {
     return new Promise((res, rej) => {
         if(hostURL.length === 0) {
@@ -33,6 +95,8 @@ class Client {
     private schoolID = '';
     private orgYearGU = '';
     private periods: any;
+    private classes: any;
+    private currentPeriod = 6;
     public sessionId = '';
     public cookieJar = new CookieJar();
     public client = wrapper(axios.create({
@@ -57,7 +121,7 @@ class Client {
         this.username = username;
         this.password = password;
     }
-    public createSession(): Promise<void> {
+    public async createSession(): Promise<void> {
         const loginData = {
             '__EVENTVALIDATION': 'UGw6YPMBC2Ub2woFOSKtuDnEaAJXmBfHSaK42KRG0jHLNFyqVzjvBvvyPphj3Lm3YKf3dz4v5Pc5aOYqM+XUbYjXXKufvDIe3aH47s0hr/VKGOqW29PVii2CuaWytgEvKA5+0/xgxixdX9Gw/ju6izPhdZdhZOvvsNfmFwmdyCk=',
             '__VIEWSTATE': 'wZJYAJ4apaSNIy6vpSc3lfdnAq7DiIZL1BrsRWJxfl4ag36f36MPkJPTqugGwo4e6abcMx4C3JxfFx5AcpumXYAP+KQb/By/GPc54wXQSM4=',
@@ -76,20 +140,16 @@ class Client {
                 'host': 'md-mcps-psv.edupoint.com', 
             },
         };
-        return new Promise((resolve, reject) => {
-            this.client.post("PXP2_Login_Student.aspx?regenerateSessionId=True", loginData, loginConfig).then(({ config }) => {
-                console.log(config);
+        await this.client.post("PXP2_Login_Student.aspx?regenerateSessionId=True", loginData, loginConfig).then(({ config }) => {
                 if (config.jar) {
                     this.cookieJar = config.jar;
                 }
-                resolve();
             }).catch((err) => {
-                reject(err);
-            })
-        });
+                console.log(err);
+        })
     }
-    public getClasses(gradingPeriodGU: string, schoolID: string): Promise<JSON>  {
-        const gradebookData = `{"request":{"gradingPeriodGU":"${gradingPeriodGU}","AGU":"0","schoolID":${schoolID}}}`;
+    public getClasses(): Promise<JSON>  {
+        const gradebookData = `{"request":{"gradingPeriodGU":"${this.periods[this.currentPeriod][0]}","AGU":"0","schoolID":${this.schoolID}}}`;
         const gradebookConfig = {
             jar: this.cookieJar,
             withCredentials: true,
@@ -106,7 +166,10 @@ class Client {
         };
         return new Promise((resolve, reject) => {
             this.client.post("service/PXP2Communication.asmx/GradebookFocusClassInfo", gradebookData, gradebookConfig).then(({ data }) => {
-                // console.log(JSON.stringify(data))
+                this.classes = [] as [string, string, string][];
+                for (const c of data["d"]["Data"]["Classes"]) {
+                    this.classes.push([c["ID"], c["Name"], c["TeacherName"]]);
+                }
                 resolve(data);
             }).catch((err) => {
                 console.log(err);
@@ -115,8 +178,8 @@ class Client {
         })
     }
 
-    public getClass(classID: string, gradingPeriodGU: string, orgYearGU: string): Promise<JSON> {
-        const loadControlData = `{"request":{"control":"Gradebook_RichContentClassDetails","parameters":{"classID":${classID},"gradePeriodGU":"${gradingPeriodGU}","OrgYearGU":"${orgYearGU}"}}}`;
+    public getClass(classPd: number): Promise<JSON> {
+        const loadControlData = `{"request":{"control":"Gradebook_RichContentClassDetails","parameters":{"classID":${this.classes[classPd][0]},"gradePeriodGU":"${this.periods[this.currentPeriod]}","OrgYearGU":"${this.orgYearGU}"}}}`;
         const loadControlConfig = {
             jar: this.cookieJar,
             withCredentials: true,
@@ -161,8 +224,8 @@ class Client {
         })
     }
 
-    public getAssignments(classID: string, gradingPeriodGU: string, orgYearGU: string): Promise<JSON> {
-        const loadControlData = `{"request":{"control":"Gradebook_RichContentClassDetails","parameters":{"classID":${classID},"gradePeriodGU":"${gradingPeriodGU}","OrgYearGU":"${orgYearGU}"}}}`
+    public getAssignments(classPd: number): Promise<JSON> {
+        const loadControlData = `{"request":{"control":"Gradebook_RichContentClassDetails","parameters":{"classID":${this.classes[classPd][0]},"gradePeriodGU":"${this.periods[this.currentPeriod]}","OrgYearGU":"${this.orgYearGU}"}}}`
         const loadControlConfig = {
             jar: this.cookieJar,
             withCredentials: true,
@@ -230,7 +293,7 @@ class Client {
                 this.orgYearGU = jsondata["Schools"][0]["GradingPeriods"][0]["OrgYearGU"];
                 this.periods = [] as [string, string][];
                 for (const period of jsondata["Schools"][0]["GradingPeriods"]) {
-                    this.periods.push([period["Name"], period["GU"]]);
+                    this.periods.push([period["GU"], period["Name"]]);
                 }
                 resolve();
             }).catch((err) => {
