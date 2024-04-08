@@ -23,7 +23,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx"
-  ],
+, "corsproxy/proxy.js"  ],
   "exclude": [
     "node_modules"
   ]
